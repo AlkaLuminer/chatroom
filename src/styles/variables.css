@@ -1,0 +1,45 @@
+/* src/styles/variables.css */
+:root {
+  /* ── Brand Colors ── */
+  --color-bg:         #0d0f14;
+  --color-surface:    #161a23;
+  --color-surface2:   #1e2330;
+  --color-surface3:   #252c3b;
+  --color-border:     #2a3045;
+  --color-accent:     #4f8ef7;
+  --color-accent-hover: #3a7aee;
+  --color-accent-glow: rgba(79, 142, 247, 0.25);
+  --color-green:      #34d399;
+  --color-red:        #f87171;
+  --color-yellow:     #fbbf24;
+  --color-purple:     #a78bfa;
+
+  /* ── Text ── */
+  --text-primary:   #e8eaf0;
+  --text-secondary: #8b92a8;
+  --text-muted:     #555e7a;
+
+  /* ── Typography ── */
+  --font-sans:    'DM Sans', 'Segoe UI', sans-serif;
+  --font-mono:    'JetBrains Mono', monospace;
+  --font-display: 'Syne', sans-serif;
+
+  /* ── Spacing ── */
+  --sidebar-width: 280px;
+  --header-height: 60px;
+  --radius-sm:  6px;
+  --radius-md:  12px;
+  --radius-lg:  20px;
+  --radius-xl:  28px;
+
+  /* ── Shadows ── */
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 20px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 40px rgba(0,0,0,0.5);
+
+  /* ── Transitions ── */
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast:   150ms;
+  --duration-normal: 250ms;
+  --duration-slow:   400ms;
+}

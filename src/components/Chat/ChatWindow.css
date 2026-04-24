@@ -1,0 +1,131 @@
+/* src/components/Chat/ChatWindow.css */
+
+.chat-window {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+/* ── Empty State ─────────────────────────────── */
+.chat-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text-muted);
+}
+
+.chat-empty-icon {
+  font-size: 56px;
+  animation: popIn 0.5s var(--ease-smooth);
+}
+
+.chat-empty-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--text-primary);
+}
+
+.chat-empty-sub {
+  font-size: 14px;
+  max-width: 320px;
+  text-align: center;
+}
+
+/* ── Header ──────────────────────────────────── */
+.chat-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  flex-shrink: 0;
+  height: var(--header-height);
+}
+
+.mobile-menu-btn {
+  display: none;
+}
+
+.chat-header-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-md);
+  transition: background var(--duration-fast) var(--ease-smooth);
+}
+.chat-header-info:hover { background: var(--color-surface2); }
+
+.chat-header-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+.chat-header-name {
+  font-size: 16px;
+  font-weight: 600;
+  font-family: var(--font-display);
+}
+
+.chat-header-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.chat-header-actions {
+  display: flex;
+  gap: 4px;
+}
+
+/* ── Search Bar ──────────────────────────────── */
+.chat-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  flex-shrink: 0;
+}
+
+/* ── Messages ────────────────────────────────── */
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chat-no-results {
+  text-align: center;
+  padding: 32px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* ── Mobile ──────────────────────────────────── */
+@media (max-width: 768px) {
+  .mobile-menu-btn {
+    display: flex;
+    font-size: 20px;
+  }
+}
