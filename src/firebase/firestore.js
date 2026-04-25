@@ -190,32 +190,3 @@ export const toggleReaction = async (roomId, messageId, emoji, userId) => {
     await updateDoc(msgRef, { [`reactions.${emoji}`]: [...users, userId] });
   }
 };
-
-// ══════════════════════════════════════════════════════════════════════════════
-// EMOJI REACTIONS
-// ══════════════════════════════════════════════════════════════════════════════
-
-/** Toggle emoji reaction on a message */
-export const toggleReaction = async (roomId, messageId, emoji, userId) => {
-  const msgRef = doc(db, "rooms", roomId, "messages", messageId);
-  const snap = await getDoc(msgRef);
-  if (!snap.exists()) return;
-
-  const reactions = snap.data().reactions || {};
-  const users = reactions[emoji] || [];
-  const alreadyReacted = users.includes(userId);
-
-  if (alreadyReacted) {
-    // Remove reaction
-    const updated = users.filter((u) => u !== userId);
-    if (updated.length === 0) {
-      const { [emoji]: _, ...rest } = reactions;
-      await updateDoc(msgRef, { reactions: rest });
-    } else {
-      await updateDoc(msgRef, { [`reactions.${emoji}`]: updated });
-    }
-  } else {
-    // Add reaction
-    await updateDoc(msgRef, { [`reactions.${emoji}`]: [...users, userId] });
-  }
-};
