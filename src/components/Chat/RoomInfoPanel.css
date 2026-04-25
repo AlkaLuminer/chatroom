@@ -131,3 +131,23 @@
     width: 100%;
   }
 }
+
+/* Clickable member row */
+.member-clickable {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  padding: 4px 6px;
+  border-radius: var(--radius-md);
+  transition: background var(--duration-fast) var(--ease-smooth);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+}
+.member-clickable:hover {
+  background: var(--color-surface3);
+}
