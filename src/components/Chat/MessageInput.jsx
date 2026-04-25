@@ -6,34 +6,31 @@ import { sendMessage } from "../../firebase/firestore";
 import { uploadChatImage } from "../../firebase/storage";
 import "./MessageInput.css";
 
-export default function MessageInput({ room }) {
+export default function MessageInput({ room, replyTo, onCancelReply }) {
   const { userProfile } = useAuth();
-  const [text, setText] = useState("");
+  const [text, setText]           = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
   const [imageFile, setImageFile] = useState(null);
-  const fileRef = useRef(null);
+  const fileRef     = useRef(null);
   const textareaRef = useRef(null);
 
   const handleSend = async () => {
     const trimmed = text.trim();
     if (!trimmed && !imageFile) return;
-
-    const senderName = userProfile.displayName || "Anonymous";
-    const senderPhoto = userProfile.photoURL || "";
-
+    const senderName  = userProfile.displayName || "Anonymous";
+    const senderPhoto = userProfile.photoURL    || "";
     try {
       if (imageFile) {
         setUploading(true);
         const { url } = await uploadChatImage(imageFile, room.id);
-        await sendMessage(room.id, userProfile.uid, senderName, senderPhoto, url, "image");
-        setImageFile(null);
-        setImagePreview(null);
+        await sendMessage(room.id, userProfile.uid, senderName, senderPhoto, url, "image", replyTo || null);
+        setImageFile(null); setImagePreview(null);
         setUploading(false);
       }
       if (trimmed) {
-        await sendMessage(room.id, userProfile.uid, senderName, senderPhoto, trimmed, "text");
+        await sendMessage(room.id, userProfile.uid, senderName, senderPhoto, trimmed, "text", replyTo || null);
         setText("");
       }
     } catch (err) {
@@ -41,14 +38,12 @@ export default function MessageInput({ room }) {
       setUploading(false);
     }
     setShowEmoji(false);
+    onCancelReply && onCancelReply();
     textareaRef.current?.focus();
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
   };
 
   const handleEmojiClick = (emojiData) => {
@@ -67,6 +62,20 @@ export default function MessageInput({ room }) {
 
   return (
     <div className="message-input-area">
+      {/* Reply Preview Bar */}
+      {replyTo && (
+        <div className="reply-preview-bar anim-slide-up">
+          <div className="reply-preview-bar-line" />
+          <div className="reply-preview-info">
+            <div className="reply-preview-name">↩ Replying to {replyTo.senderName}</div>
+            <div className="reply-preview-text">
+              {replyTo.type === "image" ? "📷 Image" : replyTo.content}
+            </div>
+          </div>
+          <button className="btn-icon" onClick={onCancelReply} style={{ marginLeft: "auto" }}>✕</button>
+        </div>
+      )}
+
       {/* Image Preview */}
       {imagePreview && (
         <div className="image-preview-bar anim-slide-up">
@@ -79,58 +88,22 @@ export default function MessageInput({ room }) {
       {/* Emoji Picker */}
       {showEmoji && (
         <div className="emoji-picker-wrap anim-pop-in">
-          <EmojiPicker
-            onEmojiClick={handleEmojiClick}
-            theme="dark"
-            height={380}
-            width="100%"
-            searchDisabled={false}
-          />
+          <EmojiPicker onEmojiClick={handleEmojiClick} theme="dark" height={380} width="100%" />
         </div>
       )}
 
       <div className="message-input-row">
-        {/* Emoji Toggle */}
-        <button
-          className={`btn-icon input-action-btn ${showEmoji ? "active" : ""}`}
-          onClick={() => setShowEmoji((v) => !v)}
-          title="Emoji"
-        >😊</button>
-
-        {/* Image Upload */}
-        <button
-          className="btn-icon input-action-btn"
-          onClick={() => fileRef.current?.click()}
-          title="Send image"
-          disabled={uploading}
-        >🖼️</button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          style={{ display: "none" }}
-          onChange={handleFileChange}
-        />
-
-        {/* Text area */}
-        <textarea
-          ref={textareaRef}
-          className="message-textarea"
-          placeholder={`Message #${room.name}…`}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={handleKeyDown}
-          rows={1}
-          style={{ resize: "none" }}
-          disabled={uploading}
-        />
-
-        {/* Send button */}
-        <button
-          className={`btn btn-primary send-btn ${(text.trim() || imageFile) ? "ready" : ""}`}
-          onClick={handleSend}
-          disabled={uploading || (!text.trim() && !imageFile)}
-        >
+        <button className={`btn-icon input-action-btn ${showEmoji ? "active" : ""}`}
+          onClick={() => setShowEmoji((v) => !v)} title="Emoji">😊</button>
+        <button className="btn-icon input-action-btn"
+          onClick={() => fileRef.current?.click()} title="Send image" disabled={uploading}>🖼️</button>
+        <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFileChange} />
+        <textarea ref={textareaRef} className="message-textarea"
+          placeholder={replyTo ? `Reply to ${replyTo.senderName}...` : `Message #${room.name}…`}
+          value={text} onChange={(e) => setText(e.target.value)}
+          onKeyDown={handleKeyDown} rows={1} style={{ resize: "none" }} disabled={uploading} />
+        <button className={`btn btn-primary send-btn ${(text.trim() || imageFile) ? "ready" : ""}`}
+          onClick={handleSend} disabled={uploading || (!text.trim() && !imageFile)}>
           {uploading ? <span className="anim-spin">⟳</span> : "➤"}
         </button>
       </div>

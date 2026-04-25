@@ -1,5 +1,5 @@
 // src/components/Chat/ChatWindow.jsx
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { listenToMessages, searchMessages } from "../../firebase/firestore";
 import { showLocalNotification } from "../../hooks/useNotifications";
@@ -10,32 +10,33 @@ import "./ChatWindow.css";
 
 export default function ChatWindow({ room, onToggleSidebar }) {
   const { userProfile } = useAuth();
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages]       = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState(null);
-  const [showSearch, setShowSearch] = useState(false);
+  const [showSearch, setShowSearch]   = useState(false);
   const [showRoomInfo, setShowRoomInfo] = useState(false);
-  const bottomRef = useRef(null);
-  const prevMsgCount = useRef(0);
+  const [replyTo, setReplyTo]         = useState(null); // { messageId, senderName, content, type }
+  const [highlightedId, setHighlightedId] = useState(null);
+  const bottomRef   = useRef(null);
+  const prevCount   = useRef(0);
+  const messageRefs = useRef({}); // id → DOM ref
 
   useEffect(() => {
     if (!room) return;
-    setMessages([]);
+    setMessages([]); setReplyTo(null);
     const unsub = listenToMessages(room.id, (msgs) => {
-      // Show notification for new messages from others
-      if (msgs.length > prevMsgCount.current && prevMsgCount.current > 0) {
+      if (msgs.length > prevCount.current && prevCount.current > 0) {
         const newest = msgs[msgs.length - 1];
         if (newest.senderId !== userProfile?.uid && !document.hasFocus()) {
           showLocalNotification(newest.senderName, newest.content, room.name);
         }
       }
-      prevMsgCount.current = msgs.length;
+      prevCount.current = msgs.length;
       setMessages(msgs);
     });
     return () => unsub();
   }, [room?.id]);
 
-  // Auto-scroll to bottom on new messages
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -46,9 +47,13 @@ export default function ChatWindow({ room, onToggleSidebar }) {
     setSearchResults(results);
   };
 
-  const isBlocked = (senderId) =>
-    userProfile?.blockedUsers?.includes(senderId);
+  // Scroll to and highlight original message when reply preview clicked
+  const handleScrollTo = useCallback((messageId) => {
+    setHighlightedId(messageId);
+    setTimeout(() => setHighlightedId(null), 2000);
+  }, []);
 
+  const isBlocked = (senderId) => userProfile?.blockedUsers?.includes(senderId);
   const displayMessages = searchResults ?? messages;
 
   if (!room) {
@@ -70,17 +75,12 @@ export default function ChatWindow({ room, onToggleSidebar }) {
           <div className="chat-header-icon">{room.type === "private" ? "🔒" : "#"}</div>
           <div>
             <div className="chat-header-name">{room.name}</div>
-            <div className="chat-header-meta">
-              {room.members?.length || 0} member{room.members?.length !== 1 ? "s" : ""}
-            </div>
+            <div className="chat-header-meta">{room.members?.length || 0} member{room.members?.length !== 1 ? "s" : ""}</div>
           </div>
         </div>
         <div className="chat-header-actions">
-          <button
-            className={`btn-icon ${showSearch ? "active" : ""}`}
-            onClick={() => { setShowSearch(!showSearch); setSearchResults(null); setSearchQuery(""); }}
-            title="Search messages"
-          >🔍</button>
+          <button className={`btn-icon ${showSearch ? "active" : ""}`}
+            onClick={() => { setShowSearch(!showSearch); setSearchResults(null); setSearchQuery(""); }} title="Search">🔍</button>
           <button className="btn-icon" onClick={() => setShowRoomInfo(true)} title="Room info">ℹ️</button>
         </div>
       </div>
@@ -88,15 +88,9 @@ export default function ChatWindow({ room, onToggleSidebar }) {
       {/* Search Bar */}
       {showSearch && (
         <div className="chat-search-bar anim-slide-down">
-          <input
-            className="input"
-            placeholder="Search messages…"
-            value={searchQuery}
+          <input className="input" placeholder="Search messages…" value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-            style={{ flex: 1 }}
-            autoFocus
-          />
+            onKeyDown={(e) => e.key === "Enter" && handleSearch()} style={{ flex: 1 }} autoFocus />
           <button className="btn btn-primary" style={{ padding: "8px 16px" }} onClick={handleSearch}>Search</button>
           {searchResults && (
             <button className="btn btn-ghost" style={{ padding: "8px 16px" }} onClick={() => setSearchResults(null)}>Clear</button>
@@ -104,7 +98,7 @@ export default function ChatWindow({ room, onToggleSidebar }) {
         </div>
       )}
 
-      {/* Messages Area */}
+      {/* Messages */}
       <div className="chat-messages">
         {searchResults !== null && searchResults.length === 0 && (
           <div className="chat-no-results">No messages found for "{searchQuery}"</div>
@@ -114,10 +108,13 @@ export default function ChatWindow({ room, onToggleSidebar }) {
           return (
             <MessageBubble
               key={msg.id}
-              message={msg}
+              message={{ ...msg, _currentUserId: userProfile?.uid }}
               isOwn={msg.senderId === userProfile?.uid}
               roomId={room.id}
               prevMessage={displayMessages[i - 1]}
+              onReply={(m) => setReplyTo({ messageId: m.id, senderName: m.senderName, content: m.content, type: m.type })}
+              onScrollTo={handleScrollTo}
+              highlighted={highlightedId === msg.id}
             />
           );
         })}
@@ -125,12 +122,9 @@ export default function ChatWindow({ room, onToggleSidebar }) {
       </div>
 
       {/* Input */}
-      <MessageInput room={room} />
+      <MessageInput room={room} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} />
 
-      {/* Room Info Panel */}
-      {showRoomInfo && (
-        <RoomInfoPanel room={room} onClose={() => setShowRoomInfo(false)} />
-      )}
+      {showRoomInfo && <RoomInfoPanel room={room} onClose={() => setShowRoomInfo(false)} />}
     </div>
   );
 }

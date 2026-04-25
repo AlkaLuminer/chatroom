@@ -13,17 +13,14 @@ export default function MemberProfileModal({ userId, onClose }) {
   const isMe = userId === userProfile?.uid;
 
   useEffect(() => {
-    getUserById(userId).then((data) => {
-      setMember(data);
-      setLoading(false);
-    });
+    getUserById(userId).then((data) => { setMember(data); setLoading(false); });
   }, [userId]);
 
   const handleBlock = async () => {
     if (isBlocked) {
       await unblockUser(userProfile.uid, userId);
     } else {
-      if (!window.confirm(`Block ${member?.displayName}? Their messages will be hidden from you.`)) return;
+      if (!window.confirm(`Block ${member?.displayName}?`)) return;
       await blockUser(userProfile.uid, userId);
     }
     onClose();
@@ -39,29 +36,26 @@ export default function MemberProfileModal({ userId, onClose }) {
           <span className="modal-title">Profile</span>
           <button className="btn-icon" onClick={onClose}>✕</button>
         </div>
-
         {loading ? (
           <div style={{ padding: 40, textAlign: "center", color: "var(--text-muted)" }}>Loading...</div>
         ) : !member ? (
           <div style={{ padding: 40, textAlign: "center", color: "var(--text-muted)" }}>User not found.</div>
         ) : (
           <div className="modal-body">
-            {/* Avatar + Name */}
             <div className="member-profile-header">
               <div className="member-profile-avatar">
                 {member.photoURL
                   ? <img src={member.photoURL} alt={member.displayName} className="member-profile-img" />
-                  : <div className="member-profile-initials">{initials(member.displayName)}</div>
-                }
+                  : <div className="member-profile-initials">{initials(member.displayName)}</div>}
               </div>
               <div className="member-profile-name">{member.displayName || "Unknown"}</div>
-              <div className="member-profile-email">{member.email}</div>
-              {isBlocked && (
-                <span className="member-tag blocked" style={{ marginTop: 6 }}>Blocked</span>
+              {/* 顯示自訂 email，沒填就不顯示 */}
+              {member.displayEmail && (
+                <div className="member-profile-email">{member.displayEmail}</div>
               )}
+              {isBlocked && <span className="member-tag blocked" style={{ marginTop: 6 }}>Blocked</span>}
             </div>
 
-            {/* Info fields */}
             <div className="member-profile-info">
               {member.bio && (
                 <div className="member-profile-row">
@@ -87,7 +81,7 @@ export default function MemberProfileModal({ userId, onClose }) {
                   <span className="member-profile-value">{member.birthday}</span>
                 </div>
               )}
-              {!member.bio && !member.phoneNumber && !member.address && !member.birthday && (
+              {!member.bio && !member.phoneNumber && !member.address && !member.birthday && !member.displayEmail && (
                 <div style={{ color: "var(--text-muted)", fontSize: 13, textAlign: "center", padding: "12px 0" }}>
                   This user hasn't filled in their profile yet.
                 </div>
@@ -95,23 +89,14 @@ export default function MemberProfileModal({ userId, onClose }) {
             </div>
           </div>
         )}
-
-        {!isMe && !loading && member && (
-          <div className="modal-footer">
-            <button className="btn btn-ghost" onClick={onClose}>Close</button>
-            <button
-              className={`btn ${isBlocked ? "btn-ghost" : "btn-danger"}`}
-              onClick={handleBlock}
-            >
+        <div className="modal-footer">
+          <button className="btn btn-ghost" onClick={onClose}>Close</button>
+          {!isMe && !loading && member && (
+            <button className={`btn ${isBlocked ? "btn-ghost" : "btn-danger"}`} onClick={handleBlock}>
               {isBlocked ? "✓ Unblock" : "Block User"}
             </button>
-          </div>
-        )}
-        {(isMe || loading || !member) && (
-          <div className="modal-footer">
-            <button className="btn btn-ghost" onClick={onClose}>Close</button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

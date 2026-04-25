@@ -74,14 +74,16 @@ export const removeMemberFromRoom = (roomId, userId) =>
 // MESSAGES
 // ══════════════════════════════════════════════════════════════════════════════
 
-/** Send a message */
-export const sendMessage = async (roomId, senderId, senderName, senderPhoto, content, type = "text") => {
+/** Send a message (with optional reply) */
+export const sendMessage = async (roomId, senderId, senderName, senderPhoto, content, type = "text", replyTo = null) => {
   const msgRef = await addDoc(collection(db, "rooms", roomId, "messages"), {
     senderId,
     senderName,
     senderPhoto,
     content,
-    type, // "text" | "image" | "emoji"
+    type, // "text" | "image"
+    replyTo, // { messageId, senderName, content, type } or null
+    reactions: {},
     createdAt: serverTimestamp(),
     editedAt: null,
     deleted: false,
@@ -162,3 +164,58 @@ export const blockUser = (currentUid, targetUid) =>
 
 export const unblockUser = (currentUid, targetUid) =>
   updateDoc(doc(db, "users", currentUid), { blockedUsers: arrayRemove(targetUid) });
+
+// ══════════════════════════════════════════════════════════════════════════════
+// EMOJI REACTIONS
+// ══════════════════════════════════════════════════════════════════════════════
+
+/** Add or remove an emoji reaction on a message */
+export const toggleReaction = async (roomId, messageId, emoji, userId) => {
+  const msgRef = doc(db, "rooms", roomId, "messages", messageId);
+  const snap = await getDoc(msgRef);
+  if (!snap.exists()) return;
+  const reactions = snap.data().reactions || {};
+  const users = reactions[emoji] || [];
+  if (users.includes(userId)) {
+    // Remove reaction
+    const updated = users.filter((u) => u !== userId);
+    if (updated.length === 0) {
+      const { [emoji]: _, ...rest } = reactions;
+      await updateDoc(msgRef, { reactions: rest });
+    } else {
+      await updateDoc(msgRef, { [`reactions.${emoji}`]: updated });
+    }
+  } else {
+    // Add reaction
+    await updateDoc(msgRef, { [`reactions.${emoji}`]: [...users, userId] });
+  }
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// EMOJI REACTIONS
+// ══════════════════════════════════════════════════════════════════════════════
+
+/** Toggle emoji reaction on a message */
+export const toggleReaction = async (roomId, messageId, emoji, userId) => {
+  const msgRef = doc(db, "rooms", roomId, "messages", messageId);
+  const snap = await getDoc(msgRef);
+  if (!snap.exists()) return;
+
+  const reactions = snap.data().reactions || {};
+  const users = reactions[emoji] || [];
+  const alreadyReacted = users.includes(userId);
+
+  if (alreadyReacted) {
+    // Remove reaction
+    const updated = users.filter((u) => u !== userId);
+    if (updated.length === 0) {
+      const { [emoji]: _, ...rest } = reactions;
+      await updateDoc(msgRef, { reactions: rest });
+    } else {
+      await updateDoc(msgRef, { [`reactions.${emoji}`]: updated });
+    }
+  } else {
+    // Add reaction
+    await updateDoc(msgRef, { [`reactions.${emoji}`]: [...users, userId] });
+  }
+};
