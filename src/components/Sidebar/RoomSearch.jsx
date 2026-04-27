@@ -15,22 +15,39 @@ export default function RoomSearch({ onClose, onJoinRoom }) {
   const [joining, setJoining] = useState(false);
   const [joined, setJoined] = useState(false);
 
+  const getRank = (name, term) => {
+    if (!name) return 99;
+    if (name === term) return 0;                                          // 完全一致（大小寫）
+    if (name.toLowerCase() === term.toLowerCase()) return 1;             // 完全一致（忽略大小寫）
+    if (name.startsWith(term)) return 2;                                 // 字首符合（大小寫）
+    if (name.toLowerCase().startsWith(term.toLowerCase())) return 3;    // 字首符合（忽略大小寫）
+    if (name.includes(term)) return 4;                                   // 包含（大小寫）
+    if (name.toLowerCase().includes(term.toLowerCase())) return 5;      // 包含（忽略大小寫）
+    return 99;
+  };
+
   const handleSearch = async () => {
     if (!searchTerm.trim()) return;
     setLoading(true);
     setResults([]);
     try {
-      // 只搜尋 public 房間
       const q = query(
         collection(db, "rooms"),
         where("type", "==", "public")
       );
       const snap = await getDocs(q);
       const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      const term = searchTerm.toLowerCase();
-      const filtered = all.filter((r) =>
-        r.name?.toLowerCase().includes(term)
-      );
+
+      // 過濾有符合的房間
+      const filtered = all.filter((r) => getRank(r.name, searchTerm) < 99);
+
+      // 依排名排序，同排名再按字母順序
+      filtered.sort((a, b) => {
+        const rankDiff = getRank(a.name, searchTerm) - getRank(b.name, searchTerm);
+        if (rankDiff !== 0) return rankDiff;
+        return (a.name || "").localeCompare(b.name || "");
+      });
+
       setResults(filtered);
     } catch (err) {
       console.error(err);
