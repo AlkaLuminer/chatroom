@@ -1,7 +1,7 @@
 // src/components/Chat/RoomInfoPanel.jsx
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { getUserById, addMemberToRoom, removeMemberFromRoom, searchUsers } from "../../firebase/firestore";
+import { fetchUserById, addMemberToRoom, removeMemberFromRoom, searchUsers } from "../../firebase/firestore";
 import MemberProfileModal from "../Profile/MemberProfileModal";
 import "./RoomInfoPanel.css";
 
@@ -19,7 +19,7 @@ export default function RoomInfoPanel({ room, onClose }) {
   useEffect(() => {
     const fetchMembers = async () => {
       setLoading(true);
-      const fetched = await Promise.all((room.members || []).map((uid) => getUserById(uid)));
+      const fetched = await Promise.all((room.members || []).map((uid) => fetchUserById(uid)));
       setMembers(fetched.filter(Boolean));
       setLoading(false);
     };

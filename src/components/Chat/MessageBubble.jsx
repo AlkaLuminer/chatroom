@@ -5,54 +5,96 @@ import { format } from "date-fns";
 import ImageLightbox from "../Shared/ImageLightbox";
 import "./MessageBubble.css";
 
-const QUICK_EMOJIS = ["❤️", "😂", "😮", "😢", "😡", "👍"];
+const QUICK_EMOJI_LIST = ["❤️", "😂", "😮", "😢", "😡", "👍"];
 
-export default function MessageBubble({ message, isOwn, roomId, prevMessage, onReply, onScrollTo, highlighted }) {
-  const [showMenu, setShowMenu]       = useState(false);
-  const [showEmojiBar, setShowEmojiBar] = useState(false);
-  const [editing, setEditing]         = useState(false);
-  const [editValue, setEditValue]     = useState(message.content);
-  const [lightboxSrc, setLightboxSrc] = useState(null);
-  const menuRef = useRef(null);
-  const bubbleRef = useRef(null);
+export default function MessageBubble({
+  message, isOwn, roomId, previousMessage,
+  onReply, onScrollToMessage, isHighlighted
+}) {
+  const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
+  const [isEmojiBarOpen, setIsEmojiBarOpen]       = useState(false);
+  const [isEditMode, setIsEditMode]               = useState(false);
+  const [editedContent, setEditedContent]         = useState(message.content);
+  const [lightboxImageSrc, setLightboxImageSrc]   = useState(null);
 
-  const showAvatar = !isOwn && prevMessage?.senderId !== message.senderId;
-  const showName   = !isOwn && showAvatar;
-  const timestamp  = message.createdAt?.toDate ? format(message.createdAt.toDate(), "HH:mm") : "";
-  const reactions  = message.reactions || {};
+  const contextMenuRef = useRef(null);
+  const bubbleRef      = useRef(null);
 
+  const shouldShowAvatar = !isOwn && previousMessage?.senderId !== message.senderId;
+  const shouldShowName   = !isOwn && shouldShowAvatar;
+  const formattedTime    = message.createdAt?.toDate ? format(message.createdAt.toDate(), "HH:mm") : "";
+  const reactionMap      = message.reactions || {};
+
+  // Close context menu when clicking outside
   useEffect(() => {
-    const handler = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
-        setShowMenu(false);
-        setShowEmojiBar(false);
+    const handleOutsideClick = (event) => {
+      if (contextMenuRef.current && !contextMenuRef.current.contains(event.target)) {
+        setIsContextMenuOpen(false);
+        setIsEmojiBarOpen(false);
       }
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
-  // Highlight animation
+  // Scroll into view when highlighted
   useEffect(() => {
-    if (highlighted && bubbleRef.current) {
+    if (isHighlighted && bubbleRef.current) {
       bubbleRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
     }
-  }, [highlighted]);
+  }, [isHighlighted]);
 
-  const handleEdit = async () => {
-    if (!editValue.trim() || editValue === message.content) { setEditing(false); return; }
-    await editMessage(roomId, message.id, editValue.trim());
-    setEditing(false); setShowMenu(false);
+  const handleSaveEdit = async () => {
+    if (!editedContent.trim() || editedContent === message.content) {
+      setIsEditMode(false);
+      return;
+    }
+    await editMessage(roomId, message.id, editedContent.trim());
+    setIsEditMode(false);
+    setIsContextMenuOpen(false);
   };
 
-  const handleUnsend = async () => {
-    if (window.confirm("Unsend this message?")) await unsendMessage(roomId, message.id);
-    setShowMenu(false);
+  const handleUnsendMessage = async () => {
+    if (window.confirm("Unsend this message?")) {
+      await unsendMessage(roomId, message.id);
+    }
+    setIsContextMenuOpen(false);
   };
 
-  const handleReaction = async (emoji) => {
+  const handleSelectReaction = async (emoji) => {
     await toggleReaction(roomId, message.id, emoji, message._currentUserId);
-    setShowEmojiBar(false); setShowMenu(false);
+    setIsEmojiBarOpen(false);
+    setIsContextMenuOpen(false);
+  };
+
+  const handleOpenContextMenu = (event) => {
+    event.preventDefault();
+    setIsContextMenuOpen(true);
+    setIsEmojiBarOpen(false);
+  };
+
+  const handleOpenEmojiBar = () => {
+    setIsEmojiBarOpen(true);
+    setIsContextMenuOpen(false);
+  };
+
+  const handleReplyToMessage = () => {
+    onReply && onReply(message);
+    setIsContextMenuOpen(false);
+  };
+
+  const handleCopyText = () => {
+    navigator.clipboard.writeText(message.content);
+    setIsContextMenuOpen(false);
+  };
+
+  const handleClickReplyPreview = () => {
+    onScrollToMessage && onScrollToMessage(message.replyTo.messageId);
+  };
+
+  const handleOpenLightbox = () => {
+    setLightboxImageSrc(message.content);
+    setIsContextMenuOpen(false);
   };
 
   if (message.deleted) {
@@ -65,44 +107,59 @@ export default function MessageBubble({ message, isOwn, roomId, prevMessage, onR
 
   return (
     <>
-      <div className={`bubble-row ${isOwn ? "own" : ""} ${highlighted ? "highlighted" : ""}`} ref={bubbleRef}>
+      <div
+        className={`bubble-row ${isOwn ? "own" : ""} ${isHighlighted ? "highlighted" : ""}`}
+        ref={bubbleRef}
+      >
+        {/* Avatar (for other users only) */}
         {!isOwn && (
           <div className="bubble-avatar">
-            {showAvatar ? (
+            {shouldShowAvatar ? (
               message.senderPhoto
                 ? <img src={message.senderPhoto} alt={message.senderName} className="avatar" style={{ width: 32, height: 32 }} />
-                : <div className="avatar" style={{ width: 32, height: 32, fontSize: 13 }}>{message.senderName?.[0]?.toUpperCase() || "?"}</div>
-            ) : <div style={{ width: 32 }} />}
+                : <div className="avatar" style={{ width: 32, height: 32, fontSize: 13 }}>
+                    {message.senderName?.[0]?.toUpperCase() || "?"}
+                  </div>
+            ) : (
+              <div style={{ width: 32 }} />
+            )}
           </div>
         )}
 
         <div className="bubble-content-wrap">
-          {showName && <div className="bubble-sender">{message.senderName}</div>}
+          {shouldShowName && <div className="bubble-sender">{message.senderName}</div>}
 
-          <div className="bubble-with-menu" ref={menuRef}>
-            {editing ? (
+          <div className="bubble-with-menu" ref={contextMenuRef}>
+            {/* Edit Mode */}
+            {isEditMode ? (
               <div className={`bubble ${isOwn ? "bubble-own" : "bubble-other"} bubble-editing`}>
-                <input className="bubble-edit-input" value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") handleEdit(); if (e.key === "Escape") setEditing(false); }}
-                  autoFocus />
+                <input
+                  className="bubble-edit-input"
+                  value={editedContent}
+                  onChange={(e) => setEditedContent(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSaveEdit();
+                    if (e.key === "Escape") setIsEditMode(false);
+                  }}
+                  autoFocus
+                />
                 <div className="bubble-edit-actions">
-                  <button className="btn" style={{ padding: "4px 10px", fontSize: 12 }} onClick={() => setEditing(false)}>Cancel</button>
-                  <button className="btn btn-primary" style={{ padding: "4px 10px", fontSize: 12 }} onClick={handleEdit}>Save</button>
+                  <button className="btn" style={{ padding: "4px 10px", fontSize: 12 }}
+                    onClick={() => setIsEditMode(false)}>Cancel</button>
+                  <button className="btn btn-primary" style={{ padding: "4px 10px", fontSize: 12 }}
+                    onClick={handleSaveEdit}>Save</button>
                 </div>
               </div>
             ) : (
+              /* Normal Bubble */
               <div
-                className={`bubble ${isOwn ? "bubble-own" : "bubble-other"} ${highlighted ? "bubble-highlight" : ""}`}
-                onContextMenu={(e) => { e.preventDefault(); setShowMenu(true); setShowEmojiBar(false); }}
-                onDoubleClick={() => isOwn && message.type !== "image" && setEditing(true)}
+                className={`bubble ${isOwn ? "bubble-own" : "bubble-other"} ${isHighlighted ? "bubble-highlight" : ""}`}
+                onContextMenu={handleOpenContextMenu}
+                onDoubleClick={() => isOwn && message.type !== "image" && setIsEditMode(true)}
               >
-                {/* Reply Preview inside bubble */}
+                {/* Reply preview inside bubble */}
                 {message.replyTo && (
-                  <div
-                    className="bubble-reply-preview"
-                    onClick={() => onScrollTo && onScrollTo(message.replyTo.messageId)}
-                  >
+                  <div className="bubble-reply-preview" onClick={handleClickReplyPreview}>
                     <div className="bubble-reply-bar" />
                     <div className="bubble-reply-content">
                       <div className="bubble-reply-name">{message.replyTo.senderName}</div>
@@ -115,21 +172,23 @@ export default function MessageBubble({ message, isOwn, roomId, prevMessage, onR
 
                 {/* Message content */}
                 {message.type === "image"
-                  ? <img src={message.content} alt="shared" className="bubble-image" onClick={() => setLightboxSrc(message.content)} />
+                  ? <img src={message.content} alt="shared" className="bubble-image"
+                      onClick={() => setLightboxImageSrc(message.content)} />
                   : <span className="bubble-text">{message.content}</span>
                 }
+
                 <div className="bubble-meta">
-                  <span>{timestamp}</span>
+                  <span>{formattedTime}</span>
                   {message.editedAt && <span className="bubble-edited">edited</span>}
                 </div>
               </div>
             )}
 
-            {/* Emoji Quick Bar (hover-style, shown from menu) */}
-            {showEmojiBar && (
+            {/* Emoji Quick Bar */}
+            {isEmojiBarOpen && (
               <div className={`emoji-quick-bar anim-pop-in ${isOwn ? "bar-left" : "bar-right"}`}>
-                {QUICK_EMOJIS.map((emoji) => (
-                  <button key={emoji} className="emoji-quick-btn" onClick={() => handleReaction(emoji)}>
+                {QUICK_EMOJI_LIST.map((emoji) => (
+                  <button key={emoji} className="emoji-quick-btn" onClick={() => handleSelectReaction(emoji)}>
                     {emoji}
                   </button>
                 ))}
@@ -137,46 +196,40 @@ export default function MessageBubble({ message, isOwn, roomId, prevMessage, onR
             )}
 
             {/* Context Menu */}
-            {showMenu && (
+            {isContextMenuOpen && (
               <div className={`bubble-menu anim-pop-in ${isOwn ? "menu-left" : "menu-right"}`}>
-                <button className="bubble-menu-item" onClick={() => { setShowEmojiBar(true); setShowMenu(false); }}>
-                  😊 React
-                </button>
-                <button className="bubble-menu-item" onClick={() => { onReply && onReply(message); setShowMenu(false); }}>
-                  ↩ Reply
-                </button>
+                <button className="bubble-menu-item" onClick={handleOpenEmojiBar}>😊 React</button>
+                <button className="bubble-menu-item" onClick={handleReplyToMessage}>↩ Reply</button>
                 {isOwn && message.type !== "image" && (
-                  <button className="bubble-menu-item" onClick={() => { setEditing(true); setShowMenu(false); }}>
+                  <button className="bubble-menu-item" onClick={() => { setIsEditMode(true); setIsContextMenuOpen(false); }}>
                     ✏️ Edit
                   </button>
                 )}
                 {isOwn && (
-                  <button className="bubble-menu-item danger" onClick={handleUnsend}>🗑 Unsend</button>
+                  <button className="bubble-menu-item danger" onClick={handleUnsendMessage}>
+                    🗑 Unsend
+                  </button>
                 )}
                 {message.type === "image" && (
-                  <button className="bubble-menu-item" onClick={() => { setLightboxSrc(message.content); setShowMenu(false); }}>
-                    🔍 View Image
-                  </button>
+                  <button className="bubble-menu-item" onClick={handleOpenLightbox}>🔍 View Image</button>
                 )}
                 {message.type !== "image" && (
-                  <button className="bubble-menu-item" onClick={() => { navigator.clipboard.writeText(message.content); setShowMenu(false); }}>
-                    📋 Copy
-                  </button>
+                  <button className="bubble-menu-item" onClick={handleCopyText}>📋 Copy</button>
                 )}
               </div>
             )}
           </div>
 
-          {/* Emoji Reactions display */}
-          {Object.keys(reactions).length > 0 && (
+          {/* Reactions */}
+          {Object.keys(reactionMap).length > 0 && (
             <div className={`reactions-row ${isOwn ? "reactions-own" : ""}`}>
-              {Object.entries(reactions)
+              {Object.entries(reactionMap)
                 .filter(([, users]) => users.length > 0)
                 .map(([emoji, users]) => (
                   <button
                     key={emoji}
                     className={`reaction-chip ${users.includes(message._currentUserId) ? "reacted" : ""}`}
-                    onClick={() => handleReaction(emoji)}
+                    onClick={() => handleSelectReaction(emoji)}
                     title={`${users.length} reaction${users.length > 1 ? "s" : ""}`}
                   >
                     {emoji} <span className="reaction-count">{users.length}</span>
@@ -187,7 +240,9 @@ export default function MessageBubble({ message, isOwn, roomId, prevMessage, onR
         </div>
       </div>
 
-      {lightboxSrc && <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
+      {lightboxImageSrc && (
+        <ImageLightbox src={lightboxImageSrc} onClose={() => setLightboxImageSrc(null)} />
+      )}
     </>
   );
 }

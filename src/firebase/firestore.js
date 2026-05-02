@@ -37,13 +37,13 @@ export const createRoom = async (name, type, creatorId, members = []) => {
 };
 
 /** Get all public rooms */
-export const getPublicRooms = (callback) => {
+export const fetchPublicRooms = (callback) => {
   const q = query(collection(db, "rooms"), where("type", "==", "public"), orderBy("lastMessageAt", "desc"));
   return onSnapshot(q, (snap) => callback(snap.docs.map((d) => ({ id: d.id, ...d.data() }))));
 };
 
 /** Get rooms for a specific user (all joined rooms, public + private) */
-export const getUserRooms = (userId, callback) => {
+export const fetchUserRooms = (userId, callback) => {
   const q = query(
     collection(db, "rooms"),
     where("members", "array-contains", userId)
@@ -111,7 +111,7 @@ export const unsendMessage = (roomId, messageId) =>
   });
 
 /** Listen to messages in real-time */
-export const listenToMessages = (roomId, callback) => {
+export const subscribeToMessages = (roomId, callback) => {
   const q = query(
     collection(db, "rooms", roomId, "messages"),
     orderBy("createdAt", "asc")
@@ -137,7 +137,7 @@ export const searchMessages = async (roomId, searchTerm) => {
 // ══════════════════════════════════════════════════════════════════════════════
 
 /** Get a user by uid */
-export const getUserById = async (uid) => {
+export const fetchUserById = async (uid) => {
   const snap = await getDoc(doc(db, "users", uid));
   return snap.exists() ? { id: snap.id, ...snap.data() } : null;
 };
@@ -190,3 +190,5 @@ export const toggleReaction = async (roomId, messageId, emoji, userId) => {
     await updateDoc(msgRef, { [`reactions.${emoji}`]: [...users, userId] });
   }
 };
+
+

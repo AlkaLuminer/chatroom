@@ -8,18 +8,21 @@ import ChatWindow from "./components/Chat/ChatWindow";
 import ProfileModal from "./components/Profile/ProfileModal";
 import "./styles/globals.css";
 
-function AppInner() {
-  const { currentUser, userProfile, loading } = useAuth();
-  const [activeRoom, setActiveRoom] = useState(null);
-  const [showProfile, setShowProfile] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+function AppContent() {
+  const { currentUser, userProfile, isLoadingAuth } = useAuth();
+  const [selectedRoom, setSelectedRoom]         = useState(null);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen]       = useState(false);
 
-  // Register push notifications
+  // Register Chrome push notifications
   useNotifications(currentUser?.uid);
 
-  if (loading) {
+  if (isLoadingAuth) {
     return (
-      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--color-bg)" }}>
+      <div style={{
+        height: "100vh", display: "flex", alignItems: "center",
+        justifyContent: "center", background: "var(--color-bg)"
+      }}>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 40, animation: "spin 0.8s linear infinite", display: "inline-block" }}>🔥</div>
           <div style={{ color: "var(--text-muted)", marginTop: 12, fontSize: 14 }}>Loading FireChat…</div>
@@ -30,33 +33,30 @@ function AppInner() {
 
   if (!currentUser) return <AuthPage />;
 
+  const handleSelectRoom = (room) => {
+    setSelectedRoom(room);
+    setIsSidebarOpen(false);
+  };
+
+  const handleToggleSidebar = () => setIsSidebarOpen((previous) => !previous);
+  const handleOpenProfile   = () => setShowProfileModal(true);
+  const handleCloseProfile  = () => setShowProfileModal(false);
+
   return (
     <div className="app-layout">
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div
-          className="sidebar-mobile-overlay"
-          onClick={() => setSidebarOpen(false)}
-          style={{
-            position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
-            zIndex: 199, display: "none"
-          }}
-        />
-      )}
-
       <Sidebar
-        activeRoomId={activeRoom?.id}
-        onSelectRoom={(room) => { setActiveRoom(room); setSidebarOpen(false); }}
-        onOpenProfile={() => setShowProfile(true)}
-        className={sidebarOpen ? "open" : ""}
+        activeRoomId={selectedRoom?.id}
+        onSelectRoom={handleSelectRoom}
+        onOpenProfile={handleOpenProfile}
+        className={isSidebarOpen ? "open" : ""}
       />
 
       <ChatWindow
-        room={activeRoom}
-        onToggleSidebar={() => setSidebarOpen((v) => !v)}
+        room={selectedRoom}
+        onToggleSidebar={handleToggleSidebar}
       />
 
-      {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
+      {showProfileModal && <ProfileModal onClose={handleCloseProfile} />}
     </div>
   );
 }
@@ -64,7 +64,7 @@ function AppInner() {
 export default function App() {
   return (
     <AuthProvider>
-      <AppInner />
+      <AppContent />
     </AuthProvider>
   );
 }

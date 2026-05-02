@@ -7,45 +7,46 @@ import { auth, db } from "../firebase/config";
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [userProfile, setUserProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser]     = useState(null);
+  const [userProfile, setUserProfile]     = useState(null);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
 
   useEffect(() => {
-    const unsubAuth = onAuthStateChanged(auth, (user) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
+
       if (!user) {
         setUserProfile(null);
-        setLoading(false);
+        setIsLoadingAuth(false);
         return;
       }
 
       // Listen to Firestore user doc in real-time
-      const unsubProfile = onSnapshot(doc(db, "users", user.uid), (snap) => {
-        if (snap.exists()) {
-          setUserProfile({ id: snap.id, ...snap.data() });
+      const unsubscribeProfile = onSnapshot(doc(db, "users", user.uid), (snapshot) => {
+        if (snapshot.exists()) {
+          setUserProfile({ id: snapshot.id, ...snapshot.data() });
         }
-        setLoading(false);
+        setIsLoadingAuth(false);
       });
 
-      // Update lastSeen
+      // Update last seen timestamp
       updateDoc(doc(db, "users", user.uid), { lastSeen: serverTimestamp() }).catch(() => {});
 
-      return () => unsubProfile();
+      return () => unsubscribeProfile();
     });
 
-    return () => unsubAuth();
+    return () => unsubscribeAuth();
   }, []);
 
   return (
-    <AuthContext.Provider value={{ currentUser, userProfile, loading }}>
+    <AuthContext.Provider value={{ currentUser, userProfile, isLoadingAuth }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
 export const useAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be inside AuthProvider");
-  return ctx;
+  const context = useContext(AuthContext);
+  if (!context) throw new Error("useAuth must be used inside AuthProvider");
+  return context;
 };

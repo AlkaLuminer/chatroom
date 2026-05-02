@@ -1,6 +1,6 @@
 // src/components/Profile/MemberProfileModal.jsx
 import React, { useState, useEffect } from "react";
-import { getUserById, blockUser, unblockUser } from "../../firebase/firestore";
+import { fetchUserById, blockUser, unblockUser } from "../../firebase/firestore";
 import { useAuth } from "../../context/AuthContext";
 import "./MemberProfileModal.css";
 
@@ -13,7 +13,7 @@ export default function MemberProfileModal({ userId, onClose }) {
   const isMe = userId === userProfile?.uid;
 
   useEffect(() => {
-    getUserById(userId).then((data) => { setMember(data); setLoading(false); });
+    fetchUserById(userId).then((data) => { setMember(data); setLoading(false); });
   }, [userId]);
 
   const handleBlock = async () => {
