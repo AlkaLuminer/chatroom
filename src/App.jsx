@@ -9,12 +9,11 @@ import ProfileModal from "./components/Profile/ProfileModal";
 import "./styles/globals.css";
 
 function AppContent() {
-  const { currentUser, userProfile, isLoadingAuth } = useAuth();
+  const { currentUser, isLoadingAuth } = useAuth();
   const [selectedRoom, setSelectedRoom]         = useState(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen]       = useState(false);
+  const [activeTab, setActiveTab]               = useState("rooms"); // "rooms" | "chat"
 
-  // Register Chrome push notifications
   useNotifications(currentUser?.uid);
 
   if (isLoadingAuth) {
@@ -35,26 +34,56 @@ function AppContent() {
 
   const handleSelectRoom = (room) => {
     setSelectedRoom(room);
-    setIsSidebarOpen(false);
+    setActiveTab("chat"); // Switch to chat tab on mobile when room selected
   };
 
-  const handleToggleSidebar = () => setIsSidebarOpen((previous) => !previous);
   const handleOpenProfile   = () => setShowProfileModal(true);
   const handleCloseProfile  = () => setShowProfileModal(false);
 
   return (
     <div className="app-layout">
-      <Sidebar
-        activeRoomId={selectedRoom?.id}
-        onSelectRoom={handleSelectRoom}
-        onOpenProfile={handleOpenProfile}
-        className={isSidebarOpen ? "open" : ""}
-      />
+      {/* Desktop: side-by-side layout */}
+      {/* Mobile: tab-based layout */}
+      <div className={`app-sidebar-wrap ${activeTab === "rooms" ? "mobile-visible" : "mobile-hidden"}`}>
+        <Sidebar
+          activeRoomId={selectedRoom?.id}
+          onSelectRoom={handleSelectRoom}
+          onOpenProfile={handleOpenProfile}
+        />
+      </div>
 
-      <ChatWindow
-        room={selectedRoom}
-        onToggleSidebar={handleToggleSidebar}
-      />
+      <div className={`app-chat-wrap ${activeTab === "chat" ? "mobile-visible" : "mobile-hidden"}`}>
+        <ChatWindow
+          room={selectedRoom}
+          onToggleSidebar={() => setActiveTab("rooms")}
+        />
+      </div>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="mobile-bottom-nav">
+        <button
+          className={`mobile-nav-btn ${activeTab === "rooms" ? "active" : ""}`}
+          onClick={() => setActiveTab("rooms")}
+        >
+          <span className="mobile-nav-icon">💬</span>
+          <span className="mobile-nav-label">Rooms</span>
+        </button>
+        <button
+          className={`mobile-nav-btn ${activeTab === "chat" ? "active" : ""}`}
+          onClick={() => setActiveTab("chat")}
+          disabled={!selectedRoom}
+        >
+          <span className="mobile-nav-icon">{selectedRoom ? "#" : "—"}</span>
+          <span className="mobile-nav-label">{selectedRoom ? selectedRoom.name : "No Room"}</span>
+        </button>
+        <button
+          className="mobile-nav-btn"
+          onClick={handleOpenProfile}
+        >
+          <span className="mobile-nav-icon">👤</span>
+          <span className="mobile-nav-label">Profile</span>
+        </button>
+      </nav>
 
       {showProfileModal && <ProfileModal onClose={handleCloseProfile} />}
     </div>

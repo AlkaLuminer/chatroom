@@ -269,3 +269,211 @@ body {
   .modal { max-width: 100%; border-radius: var(--radius-lg) var(--radius-lg) 0 0; margin-top: auto; }
   .modal-overlay { align-items: flex-end; }
 }
+
+/* ══════════════════════════════════════════════════════
+   MOBILE RESPONSIVE LAYOUT
+   ══════════════════════════════════════════════════════ */
+
+/* Desktop: side by side */
+.app-sidebar-wrap {
+  display: flex;
+  height: 100%;
+  flex-shrink: 0;
+}
+
+.app-chat-wrap {
+  display: flex;
+  flex: 1;
+  height: 100%;
+  min-width: 0;
+}
+
+/* Bottom nav hidden on desktop */
+.mobile-bottom-nav {
+  display: none;
+}
+
+/* ── Mobile (max 768px) ───────────────────────── */
+@media (max-width: 768px) {
+
+  /* Full screen layout */
+  .app-layout {
+    flex-direction: column;
+    height: 100dvh; /* dynamic viewport height for mobile browsers */
+  }
+
+  /* Sidebar takes full screen on mobile */
+  .app-sidebar-wrap {
+    position: fixed;
+    inset: 0;
+    bottom: 60px; /* leave room for bottom nav */
+    z-index: 10;
+    background: var(--color-surface);
+  }
+
+  /* Chat takes full screen on mobile */
+  .app-chat-wrap {
+    position: fixed;
+    inset: 0;
+    bottom: 60px;
+    z-index: 10;
+  }
+
+  /* Show/hide tabs */
+  .mobile-visible  { display: flex !important; }
+  .mobile-hidden   { display: none  !important; }
+
+  /* Sidebar fills full width */
+  .sidebar {
+    width: 100% !important;
+    transform: none !important;
+  }
+
+  /* Bottom Navigation Bar */
+  .mobile-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+    z-index: 100;
+    align-items: stretch;
+  }
+
+  .mobile-nav-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 6px 4px;
+    transition: background var(--duration-fast) var(--ease-smooth);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mobile-nav-btn:active {
+    background: var(--color-surface2);
+  }
+
+  .mobile-nav-btn.active .mobile-nav-icon,
+  .mobile-nav-btn.active .mobile-nav-label {
+    color: var(--color-accent);
+  }
+
+  .mobile-nav-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .mobile-nav-icon {
+    font-size: 20px;
+    color: var(--text-secondary);
+    line-height: 1;
+  }
+
+  .mobile-nav-label {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 80px;
+    font-family: var(--font-sans);
+  }
+
+  /* Hide the hamburger menu on mobile (using bottom nav instead) */
+  .mobile-menu-btn {
+    display: none !important;
+  }
+
+  /* Chat window bottom padding for nav bar */
+  .message-input-area {
+    padding-bottom: 16px;
+  }
+
+  /* Make modals full screen on mobile */
+  .modal {
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: 90dvh !important;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0 !important;
+    margin: 0 !important;
+  }
+
+  .modal-overlay {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+
+  /* Room info panel full screen on mobile */
+  .room-info-overlay {
+    z-index: 200;
+  }
+
+  .room-info-panel {
+    width: 100% !important;
+  }
+
+  /* Emoji picker fits mobile screen */
+  .emoji-picker-wrap {
+    left: 0 !important;
+    right: 0 !important;
+    max-width: 100% !important;
+  }
+
+  /* Make bubble context menu stay on screen */
+  .bubble-menu.menu-left  { right: 0; left: auto; }
+  .bubble-menu.menu-right { left: 0; }
+
+  /* Long press for context menu on mobile (touch) */
+  .bubble {
+    -webkit-touch-callout: none;
+    user-select: none;
+  }
+
+  /* Input area adapts to keyboard */
+  .message-input-area {
+    position: sticky;
+    bottom: 0;
+  }
+
+  /* Chat messages area */
+  .chat-messages {
+    padding-bottom: 8px;
+  }
+
+  /* Larger tap targets for buttons */
+  .btn-icon {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  /* Room search modal */
+  .room-search-modal {
+    max-width: 100% !important;
+  }
+}
+
+/* ── Very small screens (max 380px) ──────────── */
+@media (max-width: 380px) {
+  .mobile-nav-label {
+    font-size: 9px;
+    max-width: 60px;
+  }
+
+  .mobile-nav-icon {
+    font-size: 18px;
+  }
+
+  .chat-header-name {
+    font-size: 14px;
+  }
+}

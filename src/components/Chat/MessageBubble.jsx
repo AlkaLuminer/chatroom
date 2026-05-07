@@ -17,8 +17,26 @@ export default function MessageBubble({
   const [editedContent, setEditedContent]         = useState(message.content);
   const [lightboxImageSrc, setLightboxImageSrc]   = useState(null);
 
-  const contextMenuRef = useRef(null);
-  const bubbleRef      = useRef(null);
+  const contextMenuRef  = useRef(null);
+  const bubbleRef       = useRef(null);
+  const longPressTimer  = useRef(null);
+
+  // Long press handler for mobile (replaces right-click)
+  const handleTouchStart = () => {
+    longPressTimer.current = setTimeout(() => {
+      setIsContextMenuOpen(true);
+      setIsEmojiBarOpen(false);
+      // Vibrate if supported
+      if (navigator.vibrate) navigator.vibrate(50);
+    }, 500);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
 
   const shouldShowAvatar = !isOwn && previousMessage?.senderId !== message.senderId;
   const shouldShowName   = !isOwn && shouldShowAvatar;
@@ -156,6 +174,9 @@ export default function MessageBubble({
                 className={`bubble ${isOwn ? "bubble-own" : "bubble-other"} ${isHighlighted ? "bubble-highlight" : ""}`}
                 onContextMenu={handleOpenContextMenu}
                 onDoubleClick={() => isOwn && message.type !== "image" && setIsEditMode(true)}
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+                onTouchMove={handleTouchEnd}
               >
                 {/* Reply preview inside bubble */}
                 {message.replyTo && (

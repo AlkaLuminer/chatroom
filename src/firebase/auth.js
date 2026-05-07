@@ -3,12 +3,19 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut,
   updateProfile,
   sendPasswordResetEmail,
 } from "firebase/auth";
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { auth, googleProvider, db } from "./config";
+
+// Detect if user is on mobile browser
+const detectMobileDevice = () => {
+  return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
+};
 
 // ─── Email Sign Up ────────────────────────────────────────────────────────────
 export const registerWithEmail = async (email, password, displayName) => {
@@ -24,15 +31,39 @@ export const loginWithEmail = async (email, password) => {
   return result.user;
 };
 
-// ─── Google Login ─────────────────────────────────────────────────────────────
+// ─── Google Login (popup on desktop, redirect on mobile) ─────────────────────
 export const loginWithGoogle = async () => {
-  const result = await signInWithPopup(auth, googleProvider);
-  const user = result.user;
-  const existingDoc = await getDoc(doc(db, "users", user.uid));
-  if (!existingDoc.exists()) {
-    await createUserDocument(user, {});
+  if (detectMobileDevice()) {
+    // Mobile: use redirect (popup doesn't work on mobile browsers)
+    await signInWithRedirect(auth, googleProvider);
+    return null; // page will redirect, result handled by checkGoogleRedirectResult
+  } else {
+    // Desktop: use popup
+    const result = await signInWithPopup(auth, googleProvider);
+    const user = result.user;
+    const existingDoc = await getDoc(doc(db, "users", user.uid));
+    if (!existingDoc.exists()) {
+      await createUserDocument(user, {});
+    }
+    return user;
   }
-  return user;
+};
+
+// ─── Handle Google Redirect Result (called on app load for mobile) ────────────
+export const checkGoogleRedirectResult = async () => {
+  try {
+    const result = await getRedirectResult(auth);
+    if (result?.user) {
+      const existingDoc = await getDoc(doc(db, "users", result.user.uid));
+      if (!existingDoc.exists()) {
+        await createUserDocument(result.user, {});
+      }
+      return result.user;
+    }
+  } catch (err) {
+    console.error("Redirect result error:", err);
+  }
+  return null;
 };
 
 // ─── Sign Out ─────────────────────────────────────────────────────────────────
